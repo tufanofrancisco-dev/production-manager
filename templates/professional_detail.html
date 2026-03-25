@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% block title %}{{ prof.name }} — Production Manager{% endblock %}
+{% block page_title %}{{ prof.name }}{% endblock %}
+
+{% block topbar_actions %}
+<div class="d-flex gap-2">
+    <a href="/professionals/{{ prof.id }}/edit" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-pencil me-1"></i>Editar
+    </a>
+    <form method="POST" action="/professionals/{{ prof.id }}/delete" onsubmit="return confirm('Remover este profissional? Todos os pagamentos serão apagados.');">
+        <button type="submit" class="btn btn-sm btn-outline-danger">
+            <i class="bi bi-trash me-1"></i>Remover
+        </button>
+    </form>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Info Card -->
+    <div class="col-lg-4">
+        <div class="table-card p-4">
+            <div class="text-center mb-4">
+                <div class="mx-auto mb-3 d-flex align-items-center justify-content-center"
+                     style="width:72px;height:72px;background:rgba(233,69,96,0.12);border-radius:50%;">
+                    <i class="bi bi-person-fill" style="font-size:32px;color:#e94560;"></i>
+                </div>
+                <h5 class="fw-700 mb-1">{{ prof.name }}</h5>
+                <span class="role-badge">{{ prof.role }}</span>
+            </div>
+
+            <hr style="border-color:#f0f0f0;">
+
+            {% if prof.email %}
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <i class="bi bi-envelope text-muted"></i>
+                <span style="font-size:14px;">{{ prof.email }}</span>
+            </div>
+            {% endif %}
+
+            {% if prof.phone %}
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <i class="bi bi-telephone text-muted"></i>
+                <span style="font-size:14px;">{{ prof.phone }}</span>
+            </div>
+            {% endif %}
+
+            {% if prof.notes %}
+            <div class="mt-3 p-3 rounded" style="background:#f8f9fa; font-size:13px; color:#555;">
+                <i class="bi bi-chat-quote me-1 text-muted"></i>{{ prof.notes }}
+            </div>
+            {% endif %}
+
+            <hr style="border-color:#f0f0f0;">
+
+            <div class="row text-center g-2">
+                <div class="col">
+                    <div style="font-size:22px; font-weight:700; color:#e94560;">
+                        R$ {{ "{:,.0f}".format(avg_rate).replace(",", ".") }}
+                    </div>
+                    <div style="font-size:12px; color:#6c757d;">Cachê médio</div>
+                </div>
+                <div class="col">
+                    <div style="font-size:22px; font-weight:700; color:#1a1a2e;">{{ total_projects }}</div>
+                    <div style="font-size:12px; color:#6c757d;">Projetos</div>
+                </div>
+                <div class="col-12 mt-1">
+                    <div style="font-size:18px; font-weight:700; color:#28a745;">
+                        R$ {{ "{:,.0f}".format(total_received).replace(",", ".") }}
+                    </div>
+                    <div style="font-size:12px; color:#6c757d;">Total recebido</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Payment -->
+        <div class="table-card p-4 mt-4">
+            <h6 class="fw-600 mb-3"><i class="bi bi-plus-circle me-2" style="color:#e94560;"></i>Registrar pagamento</h6>
+            <form method="POST" action="/professionals/{{ prof.id }}/payments/add">
+                <div class="mb-2">
+                    <input type="text" name="project_name" class="form-control form-control-sm" placeholder="Nome do projeto" required>
+                </div>
+                <div class="mb-2">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text">R$</span>
+                        <input type="text" name="amount" class="form-control" placeholder="Valor" required>
+                    </div>
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col">
+                        <select name="status" class="form-select form-select-sm">
+                            <option value="pago">✅ Pago</option>
+                            <option value="pendente">⏳ Pendente</option>
+                        </select>
+                    </div>
+                    <div class="col">
+                        <input type="date" name="payment_date" class="form-control form-control-sm">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <input type="text" name="notes" class="form-control form-control-sm" placeholder="Observações (opcional)">
+                </div>
+                <button type="submit" class="btn btn-sm btn-primary-custom w-100">
+                    <i class="bi bi-plus me-1"></i>Adicionar pagamento
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Payment History -->
+    <div class="col-lg-8">
+        <div class="table-card">
+            <div class="table-card-header">
+                <h6><i class="bi bi-clock-history me-2" style="color:#e94560;"></i>Histórico de pagamentos</h6>
+                <span class="badge bg-light text-dark border">{{ payments|length }} registro{{ 's' if payments|length != 1 else '' }}</span>
+            </div>
+
+            {% if payments %}
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Projeto</th>
+                        <th class="text-end">Valor</th>
+                        <th class="text-center">Status</th>
+                        <th>Data</th>
+                        <th>Obs.</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for pay in payments %}
+                    <tr>
+                        <td><strong>{{ pay.project_name or '—' }}</strong></td>
+                        <td class="text-end fw-600">R$ {{ "{:,.0f}".format(pay.amount).replace(",", ".") }}</td>
+                        <td class="text-center">
+                            {% if pay.status == 'pago' %}
+                            <span class="badge-paid">✅ Pago</span>
+                            {% else %}
+                            <span class="badge-pending">⏳ Pendente</span>
+                            {% endif %}
+                        </td>
+                        <td style="font-size:13px; color:#6c757d;">{{ pay.payment_date or '—' }}</td>
+                        <td style="font-size:13px; color:#6c757d;" class="text-truncate" style="max-width:120px;">{{ pay.notes or '' }}</td>
+                        <td>
+                            <form method="POST" action="/payments/{{ pay.id }}/delete"
+                                  onsubmit="return confirm('Remover este pagamento?');" style="display:inline;">
+                                <button type="submit" class="btn btn-sm btn-link text-danger p-0">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-receipt" style="font-size:40px; opacity:0.2;"></i>
+                <p class="mt-3 mb-0">Nenhum pagamento registrado ainda.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

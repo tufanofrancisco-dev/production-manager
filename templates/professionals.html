@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% block title %}Profissionais — Production Manager{% endblock %}
+{% block page_title %}Profissionais{% endblock %}
+
+{% block topbar_actions %}
+<a href="/professionals/new" class="btn btn-primary-custom btn-sm">
+    <i class="bi bi-person-plus-fill me-1"></i>Novo profissional
+</a>
+{% endblock %}
+
+{% block content %}
+<!-- Search & Filters -->
+<form method="GET" action="/professionals" class="search-form mb-4">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-5">
+            <input type="text" name="q" class="form-control" placeholder="Buscar por nome, cargo..." value="{{ query }}">
+        </div>
+        <div class="col-md-3">
+            <select name="role" class="form-select">
+                <option value="">Todas as funções</option>
+                {% for r in roles %}
+                <option value="{{ r }}" {% if r == selected_role %}selected{% endif %}>{{ r }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <input type="number" name="max_rate" class="form-control" placeholder="Cachê máximo (R$)" value="{{ max_rate or '' }}" min="0" step="100">
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-primary-custom w-100">
+                <i class="bi bi-search me-1"></i>Filtrar
+            </button>
+        </div>
+    </div>
+</form>
+
+<!-- Results -->
+<div class="table-card">
+    <div class="table-card-header">
+        <h6>
+            <i class="bi bi-people-fill me-2" style="color:#e94560;"></i>
+            {{ professionals|length }} profissional{{ 's' if professionals|length != 1 else '' }} encontrado{{ 's' if professionals|length != 1 else '' }}
+        </h6>
+        <a href="/import" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-upload me-1"></i>Importar planilha
+        </a>
+    </div>
+
+    {% if professionals %}
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Função</th>
+                    <th>Contato</th>
+                    <th class="text-end">Cachê médio</th>
+                    <th class="text-center">Projetos</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in professionals %}
+                <tr>
+                    <td>
+                        <div class="fw-500">{{ p.name }}</div>
+                        {% if p.notes %}
+                        <div style="font-size:12px; color:#6c757d;" class="text-truncate" style="max-width:200px;">{{ p.notes }}</div>
+                        {% endif %}
+                    </td>
+                    <td><span class="role-badge">{{ p.role }}</span></td>
+                    <td>
+                        {% if p.email %}
+                        <div style="font-size:13px;"><i class="bi bi-envelope me-1 text-muted"></i>{{ p.email }}</div>
+                        {% endif %}
+                        {% if p.phone %}
+                        <div style="font-size:13px;"><i class="bi bi-telephone me-1 text-muted"></i>{{ p.phone }}</div>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">
+                        {% if p.avg_rate %}
+                        <strong>R$ {{ "{:,.0f}".format(p.avg_rate).replace(",", ".") }}</strong>
+                        {% else %}
+                        <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        <span class="badge bg-light text-dark border">{{ p.total_projects }}</span>
+                    </td>
+                    <td class="text-end">
+                        <a href="/professionals/{{ p.id }}" class="btn btn-sm btn-outline-secondary me-1">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                        <a href="/professionals/{{ p.id }}/edit" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5 text-muted">
+        <i class="bi bi-search" style="font-size:48px; opacity:0.2;"></i>
+        <p class="mt-3 mb-0">Nenhum profissional encontrado com esses filtros.</p>
+        {% if not query and not selected_role %}
+        <a href="/import" class="btn btn-sm btn-primary-custom mt-3">
+            <i class="bi bi-upload me-1"></i>Importar planilhas
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

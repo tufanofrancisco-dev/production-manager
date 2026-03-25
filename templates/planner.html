@@ -1,0 +1,300 @@
+{% extends "base.html" %}
+{% block title %}Planejador de Equipe — Production Manager{% endblock %}
+{% block page_title %}Planejador de Equipe{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Left: Form -->
+    <div class="col-lg-4">
+        <div class="table-card p-4">
+            <h6 class="fw-600 mb-1"><i class="bi bi-sliders me-2" style="color:#e94560;"></i>Parâmetros da produção</h6>
+            <p class="text-muted mb-4" style="font-size:13px;">Informe o budget disponível e as funções que você precisa contratar.</p>
+
+            <div class="mb-3">
+                <label class="form-label fw-500">Budget disponível (R$) <span class="text-danger">*</span></label>
+                <div class="input-group">
+                    <span class="input-group-text">R$</span>
+                    <input type="number" id="budget" class="form-control form-control-lg"
+                           placeholder="0,00" min="0" step="100" style="font-size:18px; font-weight:600;">
+                </div>
+            </div>
+
+            <hr style="border-color:#f0f0f0;">
+
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <label class="form-label fw-500 mb-0">Funções necessárias</label>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="addRoleSlot()">
+                    <i class="bi bi-plus me-1"></i>Adicionar
+                </button>
+            </div>
+
+            <div id="rolesContainer">
+                <!-- Role slots will be added here -->
+            </div>
+
+            <div id="noRolesMsg" class="text-center py-3 text-muted" style="font-size:13px;">
+                Clique em "Adicionar" para incluir uma função.
+            </div>
+
+            <button type="button" class="btn btn-primary-custom w-100 mt-3" onclick="runSuggest()" id="suggestBtn">
+                <i class="bi bi-magic me-2"></i>Sugerir equipe
+            </button>
+        </div>
+
+        {% if roles %}
+        <div class="table-card p-3 mt-3">
+            <h6 class="fw-500 mb-2" style="font-size:13px; color:#6c757d;">Funções disponíveis na base</h6>
+            <div class="d-flex flex-wrap gap-1">
+                {% for r in roles %}
+                <span class="role-badge" style="cursor:pointer;" onclick="quickAddRole('{{ r }}')">{{ r }}</span>
+                {% endfor %}
+            </div>
+            <small class="text-muted d-block mt-2">Clique em uma função para adicioná-la</small>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Right: Results -->
+    <div class="col-lg-8">
+        <div id="results">
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-calculator" style="font-size:56px; opacity:0.15;"></i>
+                <h5 class="mt-3 mb-2" style="opacity:0.4;">Monte sua equipe</h5>
+                <p style="font-size:14px; opacity:0.4;">Preencha o budget e as funções ao lado para ver as sugestões.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Role slot template -->
+<template id="roleSlotTemplate">
+    <div class="role-slot border rounded-3 p-3 mb-2" style="background:#fafafa;">
+        <div class="d-flex gap-2 align-items-center">
+            <input type="text" class="form-control form-control-sm role-name-input" list="roles-datalist"
+                   placeholder="Função (ex: Editor de Vídeo)" style="flex:1;">
+            <select class="form-select form-select-sm qty-input" style="width:70px;">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+            </select>
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.role-slot').remove(); checkRoles();">
+                <i class="bi bi-x"></i>
+            </button>
+        </div>
+        <div class="role-stats mt-2" style="font-size:12px; color:#6c757d; display:none;"></div>
+    </div>
+</template>
+
+<datalist id="roles-datalist">
+    {% for r in roles %}
+    <option value="{{ r }}">
+    {% endfor %}
+</datalist>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const rolesData = {{ roles | tojson }};
+
+function checkRoles() {
+    const slots = document.querySelectorAll('.role-slot');
+    document.getElementById('noRolesMsg').style.display = slots.length === 0 ? 'block' : 'none';
+}
+
+function addRoleSlot(roleName = '') {
+    const template = document.getElementById('roleSlotTemplate');
+    const clone = template.content.cloneNode(true);
+    document.getElementById('rolesContainer').appendChild(clone);
+
+    const slot = document.querySelector('#rolesContainer .role-slot:last-child');
+    if (roleName) {
+        slot.querySelector('.role-name-input').value = roleName;
+        loadRoleStats(slot, roleName);
+    }
+
+    // Attach change listener
+    slot.querySelector('.role-name-input').addEventListener('change', function() {
+        loadRoleStats(slot, this.value);
+    });
+
+    document.getElementById('noRolesMsg').style.display = 'none';
+}
+
+function quickAddRole(role) {
+    addRoleSlot(role);
+}
+
+async function loadRoleStats(slot, role) {
+    if (!role) return;
+    try {
+        const r = await fetch(`/planner/roles/stats?role=${encodeURIComponent(role)}`);
+        const data = await r.json();
+        const statsDiv = slot.querySelector('.role-stats');
+        if (data.avg) {
+            statsDiv.style.display = 'block';
+            statsDiv.innerHTML = `
+                <i class="bi bi-info-circle me-1"></i>
+                Cachê histórico — Mín: <strong>R$ ${fmt(data.min)}</strong>
+                | Média: <strong>R$ ${fmt(data.avg)}</strong>
+                | Máx: <strong>R$ ${fmt(data.max)}</strong>
+            `;
+        } else {
+            statsDiv.style.display = 'block';
+            statsDiv.innerHTML = `<i class="bi bi-exclamation-circle me-1 text-warning"></i>Sem histórico de cachê para esta função.`;
+        }
+    } catch(e) {}
+}
+
+function fmt(val) {
+    if (!val) return '0';
+    return Math.round(val).toLocaleString('pt-BR');
+}
+
+async function runSuggest() {
+    const budget = parseFloat(document.getElementById('budget').value);
+    if (!budget || budget <= 0) {
+        alert('Informe um budget válido.');
+        return;
+    }
+
+    const slots = document.querySelectorAll('.role-slot');
+    if (slots.length === 0) {
+        alert('Adicione ao menos uma função.');
+        return;
+    }
+
+    const roles = {};
+    let valid = true;
+    slots.forEach(slot => {
+        const name = slot.querySelector('.role-name-input').value.trim();
+        const qty = parseInt(slot.querySelector('.qty-input').value);
+        if (name) {
+            roles[name] = (roles[name] || 0) + qty;
+        } else {
+            valid = false;
+        }
+    });
+
+    if (!valid || Object.keys(roles).length === 0) {
+        alert('Preencha o nome de todas as funções.');
+        return;
+    }
+
+    const btn = document.getElementById('suggestBtn');
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Calculando...';
+    btn.disabled = true;
+
+    try {
+        const resp = await fetch('/planner/suggest', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ budget, roles })
+        });
+        const data = await resp.json();
+        renderResults(data);
+    } catch(e) {
+        document.getElementById('results').innerHTML = `<div class="alert alert-danger">Erro ao calcular: ${e.message}</div>`;
+    }
+
+    btn.innerHTML = '<i class="bi bi-magic me-2"></i>Sugerir equipe';
+    btn.disabled = false;
+}
+
+function renderResults(data) {
+    const budget = data.budget;
+    const teams = data.teams;
+
+    const optLabels = {
+        'economy': { label: 'Equipe Econômica', icon: 'bi-piggy-bank-fill', color: '#28a745', desc: 'Profissionais com menor cachê médio histórico' },
+        'balanced': { label: 'Equipe Equilibrada', icon: 'bi-balance-scale-fill', color: '#0d6efd', desc: 'Profissionais com cachê médio da faixa intermediária' },
+        'premium': { label: 'Equipe Premium', icon: 'bi-star-fill', color: '#f5a623', desc: 'Profissionais com maior experiência (maior cachê médio)' }
+    };
+
+    let html = `
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <h6 class="fw-600 mb-0">Sugestões para budget de <strong>R$ ${fmt(budget)}</strong></h6>
+        </div>
+    `;
+
+    teams.forEach(team => {
+        const opt = optLabels[team.option];
+        const fits = team.fits_budget;
+        const pct = budget > 0 ? Math.min((team.total / budget) * 100, 150) : 0;
+        const barColor = fits ? '#28a745' : '#dc3545';
+
+        html += `
+        <div class="team-option-card mb-3 ${fits ? 'fits' : 'overbudget'}">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi ${opt.icon}" style="font-size:20px; color:${opt.color};"></i>
+                    <div>
+                        <div class="fw-600">${opt.label}</div>
+                        <div style="font-size:12px; color:#6c757d;">${opt.desc}</div>
+                    </div>
+                </div>
+                <div class="text-end">
+                    <div class="fw-700" style="font-size:18px; color:${fits ? '#28a745' : '#dc3545'};">
+                        R$ ${fmt(team.total)}
+                    </div>
+                    <div style="font-size:12px; color:#6c757d;">
+                        ${fits
+                            ? `<span class="text-success">✅ Dentro do budget</span> (sobra R$ ${fmt(budget - team.total)})`
+                            : `<span class="text-danger">⚠️ Excede em R$ ${fmt(team.total - budget)}</span>`
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progress bar -->
+            <div class="progress mb-3" style="height:6px; border-radius:3px;">
+                <div class="progress-bar" style="width:${Math.min(pct, 100)}%; background:${barColor}; border-radius:3px;"></div>
+            </div>
+
+            <!-- Team members -->
+        `;
+
+        if (team.missing_roles.length > 0) {
+            html += `<div class="alert alert-warning py-2 mb-2" style="font-size:13px;">
+                <i class="bi bi-exclamation-triangle me-1"></i>
+                Funções sem cadastro: <strong>${team.missing_roles.join(', ')}</strong>
+            </div>`;
+        }
+
+        if (team.team.length > 0) {
+            html += `<div class="border rounded-3 overflow-hidden">`;
+            team.team.forEach((member, i) => {
+                html += `
+                <div class="team-member-row px-3" style="${i === 0 ? '' : ''}">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="d-flex align-items-center justify-content-center rounded-circle"
+                             style="width:34px;height:34px;background:rgba(26,26,46,0.08); flex-shrink:0;">
+                            <i class="bi bi-person-fill" style="font-size:15px; color:#1a1a2e;"></i>
+                        </div>
+                        <div>
+                            <div class="fw-500" style="font-size:14px;">${member.name}</div>
+                            <div style="font-size:12px; color:#6c757d;">${member.role}${member.total_projects > 0 ? ` · ${member.total_projects} projeto(s)` : ''}</div>
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <div class="fw-600" style="font-size:14px;">
+                            ${member.avg_rate ? 'R$ ' + fmt(member.avg_rate) : '<span class="text-muted">Sem histórico</span>'}
+                        </div>
+                        ${member.email ? `<div style="font-size:11px; color:#6c757d;">${member.email}</div>` : ''}
+                    </div>
+                </div>`;
+            });
+            html += `</div>`;
+        } else {
+            html += `<div class="text-muted text-center py-3" style="font-size:13px;">Nenhum profissional encontrado para esta configuração.</div>`;
+        }
+
+        html += `</div>`;
+    });
+
+    document.getElementById('results').innerHTML = html;
+}
+</script>
+{% endblock %}

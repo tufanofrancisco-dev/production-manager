@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Importar Planilha — Production Manager{% endblock %}
+{% block page_title %}Importar planilha Excel{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="table-card p-4 mb-4">
+            <h6 class="fw-600 mb-1">
+                <i class="bi bi-file-earmark-excel-fill me-2" style="color:#28a745;"></i>
+                Enviar arquivo Excel
+            </h6>
+            <p class="text-muted mb-4" style="font-size:13px;">
+                Envie uma planilha por vez. No próximo passo você vai indicar qual coluna
+                corresponde a cada informação (nome, cargo, valor, etc.).
+            </p>
+
+            <form method="POST" action="/import" enctype="multipart/form-data">
+                <div class="border-2 border-dashed rounded-3 p-5 text-center mb-3" id="dropzone"
+                     style="border: 2px dashed #dee2e6; cursor:pointer; background:#fafafa;"
+                     onclick="document.getElementById('fileInput').click()">
+                    <i class="bi bi-cloud-upload" style="font-size:40px; color:#dee2e6;"></i>
+                    <p class="mt-2 mb-1 fw-500">Clique para selecionar o arquivo</p>
+                    <p class="text-muted mb-0" style="font-size:13px;">Aceita .xlsx e .xls</p>
+                    <p id="selectedFileName" class="mt-2 mb-0 text-success fw-500" style="font-size:14px; display:none;"></p>
+                </div>
+                <input type="file" id="fileInput" name="file" accept=".xlsx,.xls" style="display:none;"
+                       onchange="showFileName(this)">
+
+                <button type="submit" class="btn btn-primary-custom w-100" id="uploadBtn" disabled>
+                    <i class="bi bi-arrow-right-circle me-2"></i>Próximo: mapear colunas
+                </button>
+            </form>
+        </div>
+
+        <!-- Tips -->
+        <div class="table-card p-4">
+            <h6 class="fw-600 mb-3"><i class="bi bi-lightbulb-fill me-2" style="color:#f5a623;"></i>Dicas para importação</h6>
+            <div class="d-flex gap-3 mb-3">
+                <div class="text-center" style="min-width:40px;">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center"
+                         style="width:32px;height:32px;background:#e8f5e9; margin: 0 auto;">
+                        <span style="font-size:14px; font-weight:700; color:#28a745;">1</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="fw-500" style="font-size:14px;">Nome e função são obrigatórios</div>
+                    <div class="text-muted" style="font-size:13px;">Toda linha precisa ter pelo menos o nome do profissional e sua função/cargo.</div>
+                </div>
+            </div>
+            <div class="d-flex gap-3 mb-3">
+                <div class="text-center" style="min-width:40px;">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center"
+                         style="width:32px;height:32px;background:#e8f5e9; margin: 0 auto;">
+                        <span style="font-size:14px; font-weight:700; color:#28a745;">2</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="fw-500" style="font-size:14px;">Profissionais duplicados são identificados</div>
+                    <div class="text-muted" style="font-size:13px;">Se já existir um profissional com o mesmo nome e função, apenas o pagamento será adicionado.</div>
+                </div>
+            </div>
+            <div class="d-flex gap-3">
+                <div class="text-center" style="min-width:40px;">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center"
+                         style="width:32px;height:32px;background:#e8f5e9; margin: 0 auto;">
+                        <span style="font-size:14px; font-weight:700; color:#28a745;">3</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="fw-500" style="font-size:14px;">Valores em R$ são reconhecidos automaticamente</div>
+                    <div class="text-muted" style="font-size:13px;">O sistema remove R$, pontos e vírgulas para converter o valor corretamente.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function showFileName(input) {
+    if (input.files && input.files[0]) {
+        const nameEl = document.getElementById('selectedFileName');
+        nameEl.textContent = '📄 ' + input.files[0].name;
+        nameEl.style.display = 'block';
+        document.getElementById('uploadBtn').disabled = false;
+    }
+}
+</script>
+{% endblock %}

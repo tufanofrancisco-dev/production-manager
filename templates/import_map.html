@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+{% block title %}Mapear colunas — Production Manager{% endblock %}
+{% block page_title %}Mapear colunas da planilha{% endblock %}
+
+{% block content %}
+{% if error %}
+<div class="alert alert-danger">
+    <i class="bi bi-exclamation-triangle me-2"></i>
+    Erro ao ler o arquivo: {{ error }}
+    <a href="/import" class="btn btn-sm btn-outline-danger ms-3">Tentar novamente</a>
+</div>
+{% else %}
+
+<div class="row g-4">
+    <!-- Mapping form -->
+    <div class="col-lg-5">
+        <div class="table-card p-4">
+            <h6 class="fw-600 mb-1">
+                <i class="bi bi-diagram-3-fill me-2" style="color:#e94560;"></i>
+                Mapear colunas
+            </h6>
+            <p class="text-muted mb-4" style="font-size:13px;">
+                Indique qual coluna da sua planilha corresponde a cada campo abaixo.
+            </p>
+
+            <form method="POST" action="/import/process">
+                <input type="hidden" name="filename" value="{{ filename }}">
+
+                {% if sheets|length > 1 %}
+                <div class="mb-3">
+                    <label class="form-label fw-500">Aba da planilha</label>
+                    <select name="sheet_name" class="form-select form-select-sm">
+                        {% for i, s in enumerate(sheets) %}
+                        <option value="{{ i }}">{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <hr>
+                {% else %}
+                <input type="hidden" name="sheet_name" value="0">
+                {% endif %}
+
+                <!-- Required fields -->
+                <div class="mb-3">
+                    <label class="form-label fw-500">
+                        Nome do profissional <span class="text-danger">*</span>
+                    </label>
+                    <select name="col_name" class="form-select form-select-sm" required>
+                        <option value="">— Selecione a coluna —</option>
+                        {% for col in columns %}
+                        <option value="{{ col }}">{{ col }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-500">
+                        Função / Cargo <span class="text-danger">*</span>
+                    </label>
+                    <select name="col_role" class="form-select form-select-sm" required>
+                        <option value="">— Selecione a coluna —</option>
+                        {% for col in columns %}
+                        <option value="{{ col }}">{{ col }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <hr style="border-color:#f0f0f0;">
+                <p class="text-muted mb-3" style="font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Campos opcionais</p>
+
+                <div class="row g-2 mb-2">
+                    <div class="col">
+                        <label class="form-label fw-500 mb-1" style="font-size:13px;">E-mail</label>
+                        <select name="col_email" class="form-select form-select-sm">
+                            <option value="__none__">— Não importar —</option>
+                            {% for col in columns %}
+                            <option value="{{ col }}">{{ col }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col">
+                        <label class="form-label fw-500 mb-1" style="font-size:13px;">Telefone</label>
+                        <select name="col_phone" class="form-select form-select-sm">
+                            <option value="__none__">— Não importar —</option>
+                            {% for col in columns %}
+                            <option value="{{ col }}">{{ col }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-2">
+                    <label class="form-label fw-500 mb-1" style="font-size:13px;">Valor / Cachê pago (R$)</label>
+                    <select name="col_amount" class="form-select form-select-sm">
+                        <option value="__none__">— Não importar —</option>
+                        {% for col in columns %}
+                        <option value="{{ col }}">{{ col }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="row g-2 mb-2">
+                    <div class="col">
+                        <label class="form-label fw-500 mb-1" style="font-size:13px;">Nome do projeto</label>
+                        <select name="col_project_name" class="form-select form-select-sm">
+                            <option value="__none__">— Não importar —</option>
+                            {% for col in columns %}
+                            <option value="{{ col }}">{{ col }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col">
+                        <label class="form-label fw-500 mb-1" style="font-size:13px;">Status (pago/pendente)</label>
+                        <select name="col_status" class="form-select form-select-sm">
+                            <option value="__none__">— Não importar —</option>
+                            {% for col in columns %}
+                            <option value="{{ col }}">{{ col }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row g-2 mb-4">
+                    <div class="col">
+                        <label class="form-label fw-500 mb-1" style="font-size:13px;">Data do pagamento</label>
+                        <select name="col_payment_date" class="form-select form-select-sm">
+                            <option value="__none__">— Não importar —</option>
+                            {% for col in columns %}
+                            <option value="{{ col }}">{{ col }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col">
+                        <label class="form-label fw-500 mb-1" style="font-size:13px;">Observações</label>
+                        <select name="col_notes" class="form-select form-select-sm">
+                            <option value="__none__">— Não importar —</option>
+                            {% for col in columns %}
+                            <option value="{{ col }}">{{ col }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary-custom w-100">
+                    <i class="bi bi-cloud-download me-2"></i>Importar dados
+                </button>
+                <a href="/import" class="btn btn-outline-secondary w-100 mt-2">
+                    <i class="bi bi-arrow-left me-1"></i>Voltar
+                </a>
+            </form>
+        </div>
+    </div>
+
+    <!-- Preview -->
+    <div class="col-lg-7">
+        <div class="table-card">
+            <div class="table-card-header">
+                <h6><i class="bi bi-eye-fill me-2" style="color:#e94560;"></i>Prévia da planilha — primeiras linhas</h6>
+                <small class="text-muted">{{ columns|length }} coluna(s) detectada(s)</small>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm mb-0" style="font-size:12px;">
+                    <thead>
+                        <tr>
+                            {% for col in columns %}
+                            <th style="white-space:nowrap; background:#f8f9fa;">{{ col }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in preview_rows %}
+                        <tr>
+                            {% for cell in row %}
+                            <td style="white-space:nowrap; max-width:160px; overflow:hidden; text-overflow:ellipsis;">{{ cell }}</td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Auto-suggest column mappings based on common column names
+const columnMappings = {
+    'col_name': ['nome', 'name', 'profissional', 'professional', 'colaborador'],
+    'col_role': ['cargo', 'função', 'funcao', 'role', 'position', 'função/cargo', 'cargo/função'],
+    'col_email': ['email', 'e-mail', 'correio', 'mail'],
+    'col_phone': ['telefone', 'tel', 'celular', 'phone', 'whatsapp', 'fone', 'contato'],
+    'col_amount': ['valor', 'cachê', 'cache', 'amount', 'pagamento', 'fee', 'honorário', 'honorario', 'remuneração'],
+    'col_project_name': ['projeto', 'production', 'produção', 'project', 'obra', 'campanha'],
+    'col_status': ['status', 'pago', 'situação', 'situacao', 'paid'],
+    'col_payment_date': ['data', 'date', 'data pagamento', 'data_pagamento', 'dt_pagamento'],
+    'col_notes': ['obs', 'observação', 'observacoes', 'notas', 'notes', 'comentário', 'comentario']
+};
+
+const columns = {{ columns | tojson }};
+
+// Auto-select
+Object.entries(columnMappings).forEach(([field, keywords]) => {
+    const select = document.querySelector(`[name="${field}"]`);
+    if (!select) return;
+    for (const col of columns) {
+        const colLower = col.toLowerCase().trim();
+        if (keywords.some(k => colLower.includes(k) || k.includes(colLower))) {
+            select.value = col;
+            break;
+        }
+    }
+});
+</script>
+{% endblock %}
