@@ -25,7 +25,11 @@ ALLOWED_EXTENSIONS = {'xlsx', 'xls'}
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # Initialize DB on startup (works with both WSGI and direct run)
-init_db()
+try:
+    init_db()
+except Exception as _e:
+    import logging
+    logging.error(f"[init_db] Startup migration warning: {_e}")
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS

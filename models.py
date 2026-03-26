@@ -98,17 +98,28 @@ def init_db():
             )
         '''))
 
-        # Migration: add rating column if missing (existing databases)
+    # ── Step 2: Add missing columns (each in its own transaction) ─────────────
+    # Separate transactions: a failure on one column never aborts the others.
+    for pg_sql, lite_sql in [
+        (
+            "ALTER TABLE payments ADD COLUMN IF NOT EXISTS rating INTEGER",
+            "ALTER TABLE payments ADD COLUMN rating INTEGER",
+        ),
+        (
+            "ALTER TABLE payments ADD COLUMN IF NOT EXISTS project_id INTEGER",
+            "ALTER TABLE payments ADD COLUMN project_id INTEGER",
+        ),
+    ]:
         try:
-            if IS_POSTGRES:
-                conn.execute(text("ALTER TABLE payments ADD COLUMN IF NOT EXISTS rating INTEGER"))
-            else:
-                conn.execute(text("ALTER TABLE payments ADD COLUMN rating INTEGER"))
+            with _engine.begin() as conn:
+                conn.execute(text(pg_sql if IS_POSTGRES else lite_sql))
         except Exception:
-            pass  # Column already exists
+            pass  # Column already exists – safe to ignore
 
-        # Migration: populate projects from existing payment project_names
-        try:
+    # ── Step 3: Populate projects from existing payment project_names ──────────
+    # Own transaction so failures here never block the app from starting.
+    try:
+        with _engine.begin() as conn:
             distinct = conn.execute(text('''
                 SELECT DISTINCT project_name FROM payments
                 WHERE project_name IS NOT NULL AND project_name != ''
@@ -134,8 +145,8 @@ def init_db():
                     text("UPDATE payments SET project_id = :pid WHERE project_name = :pname AND project_id IS NULL"),
                     {"pid": proj_id, "pname": pname}
                 )
-        except Exception:
-            pass  # Migration already done or no data
+    except Exception:
+        pass  # Migration already done or no data yet
 
 
 # ─── ROLES ────────────────────────────────────────────────────────────────────
