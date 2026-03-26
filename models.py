@@ -308,7 +308,7 @@ def get_project_detail(project_id):
         '''), {"project_id": project_id}))
 
         project['prof_count'] = stats['prof_count'] if stats else 0
-        project['total_spent'] = stats['total_spent'] if stats else 0
+        project['total_spent'] = float(stats['total_spent']) if stats else 0
 
         return project, crew
 
