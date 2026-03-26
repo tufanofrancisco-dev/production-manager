@@ -2,12 +2,8 @@ import os
 from sqlalchemy import create_engine, text, event
 
 # ─── DATABASE SETUP ────────────────────────────────────────────────────────────
-# Railway sets DATABASE_URL automatically when a PostgreSQL addon is added.
-# Locally, we fall back to SQLite.
-
 DATABASE_URL = os.environ.get('DATABASE_URL', '')
 
-# Fix Railway's legacy postgres:// prefix
 if DATABASE_URL.startswith('postgres://'):
     DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
 
@@ -39,7 +35,6 @@ def _row(result):
     return dict(row._mapping) if row else None
 
 def _insert(conn, sql, params):
-    """Execute INSERT and return the new row's ID."""
     if IS_POSTGRES:
         result = conn.execute(text(sql + " RETURNING id"), params)
         return result.scalar()
@@ -60,6 +55,7 @@ def init_db():
     id_col = "SERIAL PRIMARY KEY" if IS_POSTGRES else "INTEGER PRIMARY KEY AUTOINCREMENT"
 
     with _engine.begin() as conn:
+        # Professionals
         conn.execute(text(f'''
             CREATE TABLE IF NOT EXISTS professionals (
                 id {id_col},
@@ -72,6 +68,22 @@ def init_db():
             )
         '''))
 
+        # Projects
+        conn.execute(text(f'''
+            CREATE TABLE IF NOT EXISTS projects (
+                id {id_col},
+                name TEXT NOT NULL,
+                client TEXT,
+                director TEXT,
+                start_date TEXT,
+                end_date TEXT,
+                budget REAL,
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        '''))
+
+        # Payments
         conn.execute(text(f'''
             CREATE TABLE IF NOT EXISTS payments (
                 id {id_col},
@@ -81,9 +93,49 @@ def init_db():
                 amount REAL NOT NULL,
                 status TEXT DEFAULT 'pago',
                 payment_date TEXT,
-                notes TEXT
+                notes TEXT,
+                rating INTEGER
             )
         '''))
+
+        # Migration: add rating column if missing (existing databases)
+        try:
+            if IS_POSTGRES:
+                conn.execute(text("ALTER TABLE payments ADD COLUMN IF NOT EXISTS rating INTEGER"))
+            else:
+                conn.execute(text("ALTER TABLE payments ADD COLUMN rating INTEGER"))
+        except Exception:
+            pass  # Column already exists
+
+        # Migration: populate projects from existing payment project_names
+        try:
+            distinct = conn.execute(text('''
+                SELECT DISTINCT project_name FROM payments
+                WHERE project_name IS NOT NULL AND project_name != ''
+                AND project_id IS NULL
+            ''')).fetchall()
+
+            for row in distinct:
+                pname = row[0].strip() if row[0] else None
+                if not pname:
+                    continue
+                existing = conn.execute(
+                    text("SELECT id FROM projects WHERE name = :name"),
+                    {"name": pname}
+                ).fetchone()
+                if existing:
+                    proj_id = existing[0]
+                else:
+                    proj_id = _insert(conn,
+                        "INSERT INTO projects (name) VALUES (:name)",
+                        {"name": pname}
+                    )
+                conn.execute(
+                    text("UPDATE payments SET project_id = :pid WHERE project_name = :pname AND project_id IS NULL"),
+                    {"pid": proj_id, "pname": pname}
+                )
+        except Exception:
+            pass  # Migration already done or no data
 
 
 # ─── ROLES ────────────────────────────────────────────────────────────────────
@@ -106,6 +158,16 @@ def get_professional_avg_rate(professional_id):
         return (row[0] or 0, row[1] or 0)
 
 
+def get_professional_avg_rating(professional_id):
+    with _engine.connect() as conn:
+        result = conn.execute(
+            text("SELECT AVG(rating) as avg_rating, COUNT(rating) as cnt FROM payments WHERE professional_id = :id AND rating IS NOT NULL"),
+            {"id": professional_id}
+        )
+        row = result.fetchone()
+        return (round(row[0], 1) if row[0] else None, row[1] or 0)
+
+
 def get_role_stats(role):
     with _engine.connect() as conn:
         result = conn.execute(text('''
@@ -120,11 +182,11 @@ def get_role_stats(role):
 
 
 def search_professionals(query=None, role=None, max_rate=None):
-    # Always select all professional columns; GROUP BY varies by dialect
     sql = f'''
         SELECT pr.id, pr.name, pr.role, pr.email, pr.phone, pr.notes, pr.created_at,
                AVG(p.amount) as avg_rate,
-               COUNT(p.id) as total_projects
+               COUNT(p.id) as total_projects,
+               AVG(p.rating) as avg_rating
         FROM professionals pr
         LEFT JOIN payments p ON p.professional_id = pr.id
         WHERE 1=1
@@ -169,6 +231,101 @@ def get_total_received(professional_id):
             {"id": professional_id}
         )
         return result.fetchone()[0] or 0
+
+
+def update_payment_rating(payment_id, rating):
+    with _engine.begin() as conn:
+        conn.execute(
+            text("UPDATE payments SET rating = :rating WHERE id = :id"),
+            {"rating": rating, "id": payment_id}
+        )
+
+
+# ─── PROJECTS ─────────────────────────────────────────────────────────────────
+
+def get_all_projects():
+    with _engine.connect() as conn:
+        group_by = "pj.id, pj.name, pj.client, pj.director, pj.start_date, pj.end_date, pj.budget, pj.created_at" if IS_POSTGRES else "pj.id"
+        result = conn.execute(text(f'''
+            SELECT pj.id, pj.name, pj.client, pj.director,
+                   pj.start_date, pj.end_date, pj.budget, pj.created_at,
+                   COUNT(DISTINCT py.professional_id) as professional_count,
+                   COALESCE(SUM(py.amount), 0) as total_spent,
+                   COUNT(py.id) as payment_count
+            FROM projects pj
+            LEFT JOIN payments py ON py.project_id = pj.id
+            GROUP BY {group_by}
+            ORDER BY pj.created_at DESC
+        '''))
+        return _rows(result)
+
+
+def get_project(project_id):
+    with _engine.connect() as conn:
+        return _row(conn.execute(
+            text("SELECT * FROM projects WHERE id = :id"),
+            {"id": project_id}
+        ))
+
+
+def get_project_detail(project_id):
+    """Returns project + all professionals with their payment/rating for this project."""
+    with _engine.connect() as conn:
+        project = _row(conn.execute(
+            text("SELECT * FROM projects WHERE id = :id"),
+            {"id": project_id}
+        ))
+        if not project:
+            return None, []
+
+        group_by = "pr.id, pr.name, pr.role, pr.email, py.id, py.amount, py.status, py.payment_date, py.rating, py.notes" if IS_POSTGRES else "py.id"
+        crew = _rows(conn.execute(text(f'''
+            SELECT pr.id as prof_id, pr.name, pr.role, pr.email,
+                   py.id as payment_id, py.amount, py.status,
+                   py.payment_date, py.rating, py.notes as pay_notes
+            FROM payments py
+            JOIN professionals pr ON py.professional_id = pr.id
+            WHERE py.project_id = :project_id
+            ORDER BY pr.role, pr.name
+        '''), {"project_id": project_id}))
+
+        # Summary stats
+        stats = _row(conn.execute(text('''
+            SELECT COUNT(DISTINCT professional_id) as prof_count,
+                   COALESCE(SUM(amount), 0) as total_spent
+            FROM payments WHERE project_id = :project_id
+        '''), {"project_id": project_id}))
+
+        project['prof_count'] = stats['prof_count'] if stats else 0
+        project['total_spent'] = stats['total_spent'] if stats else 0
+
+        return project, crew
+
+
+def create_project(name, client='', director='', start_date='', end_date='', budget=None, notes=''):
+    with _engine.begin() as conn:
+        return _insert(conn,
+            "INSERT INTO projects (name, client, director, start_date, end_date, budget, notes) VALUES (:name, :client, :director, :start_date, :end_date, :budget, :notes)",
+            {"name": name, "client": client, "director": director,
+             "start_date": start_date or None, "end_date": end_date or None,
+             "budget": budget, "notes": notes}
+        )
+
+
+def update_project(project_id, name, client='', director='', start_date='', end_date='', budget=None, notes=''):
+    with _engine.begin() as conn:
+        conn.execute(text(
+            "UPDATE projects SET name=:name, client=:client, director=:director, start_date=:start_date, end_date=:end_date, budget=:budget, notes=:notes WHERE id=:id"
+        ), {"name": name, "client": client, "director": director,
+            "start_date": start_date or None, "end_date": end_date or None,
+            "budget": budget, "id": project_id, "notes": notes})
+
+
+def delete_project(project_id):
+    with _engine.begin() as conn:
+        # Unlink payments (keep them, just remove project association)
+        conn.execute(text("UPDATE payments SET project_id = NULL WHERE project_id = :id"), {"id": project_id})
+        conn.execute(text("DELETE FROM projects WHERE id = :id"), {"id": project_id})
 
 
 # ─── BUDGET PLANNER ───────────────────────────────────────────────────────────
@@ -233,7 +390,7 @@ def suggest_team(roles_needed: dict, budget: float):
 def get_dashboard_stats():
     with _engine.connect() as conn:
         total_professionals = conn.execute(text("SELECT COUNT(*) FROM professionals")).fetchone()[0]
-        total_payments = conn.execute(text("SELECT COUNT(*) FROM payments")).fetchone()[0]
+        total_projects = conn.execute(text("SELECT COUNT(*) FROM projects")).fetchone()[0]
         total_paid = conn.execute(text("SELECT COALESCE(SUM(amount), 0) FROM payments WHERE status='pago'")).fetchone()[0]
         total_roles = conn.execute(text("SELECT COUNT(DISTINCT role) FROM professionals")).fetchone()[0]
 
@@ -260,7 +417,7 @@ def get_dashboard_stats():
 
     return {
         'total_professionals': total_professionals,
-        'total_payments': total_payments,
+        'total_projects': total_projects,
         'total_paid': total_paid or 0,
         'total_roles': total_roles,
         'top_roles': top_roles,

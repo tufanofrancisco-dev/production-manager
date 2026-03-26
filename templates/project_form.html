@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}{% if action == 'edit' %}Editar {{ project.name }}{% else %}Novo Projeto{% endif %} — Production Manager{% endblock %}
+{% block page_title %}{% if action == 'edit' %}Editar Projeto{% else %}Novo Projeto{% endif %}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="table-card p-4">
+            <form method="POST" action="{% if action == 'edit' %}/projects/{{ project.id }}/edit{% else %}/projects/new{% endif %}">
+
+                <div class="mb-3">
+                    <label class="form-label fw-600">Nome do projeto <span class="text-danger">*</span></label>
+                    <input type="text" name="name" class="form-control" required
+                           value="{{ project.name if project else '' }}"
+                           placeholder="Ex: Boticário Campanha Natal 2024">
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-500">Cliente</label>
+                        <input type="text" name="client" class="form-control"
+                               value="{{ project.client if project else '' }}"
+                               placeholder="Ex: Boticário">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-500">Diretor</label>
+                        <input type="text" name="director" class="form-control"
+                               value="{{ project.director if project else '' }}"
+                               placeholder="Ex: João Silva">
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label fw-500">Data início</label>
+                        <input type="date" name="start_date" class="form-control"
+                               value="{{ project.start_date if project else '' }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-500">Data fim</label>
+                        <input type="date" name="end_date" class="form-control"
+                               value="{{ project.end_date if project else '' }}">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-500">Budget (R$)</label>
+                        <div class="input-group">
+                            <span class="input-group-text">R$</span>
+                            <input type="number" name="budget" class="form-control" step="100" min="0"
+                                   value="{{ project.budget if project and project.budget else '' }}"
+                                   placeholder="0">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-500">Observações</label>
+                    <textarea name="notes" class="form-control" rows="3"
+                              placeholder="Informações adicionais sobre o projeto...">{{ project.notes if project and project.notes else '' }}</textarea>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary-custom">
+                        <i class="bi bi-check2 me-1"></i>
+                        {% if action == 'edit' %}Salvar alterações{% else %}Criar projeto{% endif %}
+                    </button>
+                    <a href="{% if action == 'edit' %}/projects/{{ project.id }}{% else %}/projects{% endif %}"
+                       class="btn btn-outline-secondary">Cancelar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

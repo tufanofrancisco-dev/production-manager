@@ -7,8 +7,11 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from models import (
     init_db, get_all_roles, search_professionals,
-    get_professional_avg_rate, suggest_team, get_role_stats,
+    get_professional_avg_rate, get_professional_avg_rating, suggest_team, get_role_stats,
     get_dashboard_stats, get_payments_for_professional, get_total_received,
+    update_payment_rating,
+    get_all_projects, get_project, get_project_detail,
+    create_project, update_project, delete_project,
     _engine, _insert, text
 )
 from importer import read_excel_preview, import_from_excel, get_all_sheets
@@ -98,11 +101,13 @@ def professional_detail(prof_id):
     payments = get_payments_for_professional(prof_id)
     avg_rate, total_projects = get_professional_avg_rate(prof_id)
     total_received = get_total_received(prof_id)
+    avg_rating, rating_count = get_professional_avg_rating(prof_id)
 
     return render_template('professional_detail.html',
         prof=prof, payments=payments,
         avg_rate=avg_rate, total_projects=total_projects,
-        total_received=total_received)
+        total_received=total_received,
+        avg_rating=avg_rating, rating_count=rating_count)
 
 
 @app.route('/professionals/<int:prof_id>/edit', methods=['GET', 'POST'])
@@ -182,6 +187,102 @@ def delete_payment(payment_id):
             flash('Pagamento removido.', 'success')
             return redirect(url_for('professional_detail', prof_id=prof_id))
     return redirect(url_for('professionals'))
+
+
+# ─── PAYMENT RATING ───────────────────────────────────────────────────────────
+
+@app.route('/payments/<int:payment_id>/rate', methods=['POST'])
+def rate_payment(payment_id):
+    data = request.get_json()
+    rating = data.get('rating')
+    if rating is not None:
+        try:
+            rating = int(rating)
+            if 1 <= rating <= 5:
+                update_payment_rating(payment_id, rating)
+                return jsonify({'ok': True, 'rating': rating})
+        except (ValueError, TypeError):
+            pass
+    return jsonify({'ok': False}), 400
+
+
+# ─── PROJECTS ─────────────────────────────────────────────────────────────────
+
+@app.route('/projects')
+def projects():
+    all_projects = get_all_projects()
+    return render_template('projects.html', projects=all_projects)
+
+
+@app.route('/projects/new', methods=['GET', 'POST'])
+def new_project():
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        if not name:
+            flash('Nome do projeto é obrigatório.', 'danger')
+            return redirect(url_for('new_project'))
+        budget_raw = request.form.get('budget', '').replace(',', '.').strip()
+        budget = float(budget_raw) if budget_raw else None
+        proj_id = create_project(
+            name=name,
+            client=request.form.get('client', '').strip(),
+            director=request.form.get('director', '').strip(),
+            start_date=request.form.get('start_date', '').strip(),
+            end_date=request.form.get('end_date', '').strip(),
+            budget=budget,
+            notes=request.form.get('notes', '').strip()
+        )
+        flash(f'Projeto "{name}" criado com sucesso!', 'success')
+        return redirect(url_for('project_detail', project_id=proj_id))
+    return render_template('project_form.html', project=None, action='new')
+
+
+@app.route('/projects/<int:project_id>')
+def project_detail(project_id):
+    project, crew = get_project_detail(project_id)
+    if not project:
+        flash('Projeto não encontrado.', 'danger')
+        return redirect(url_for('projects'))
+    return render_template('project_detail.html', project=project, crew=crew)
+
+
+@app.route('/projects/<int:project_id>/edit', methods=['GET', 'POST'])
+def edit_project(project_id):
+    project = get_project(project_id)
+    if not project:
+        flash('Projeto não encontrado.', 'danger')
+        return redirect(url_for('projects'))
+
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        if not name:
+            flash('Nome é obrigatório.', 'danger')
+            return redirect(url_for('edit_project', project_id=project_id))
+        budget_raw = request.form.get('budget', '').replace(',', '.').strip()
+        budget = float(budget_raw) if budget_raw else None
+        update_project(
+            project_id=project_id,
+            name=name,
+            client=request.form.get('client', '').strip(),
+            director=request.form.get('director', '').strip(),
+            start_date=request.form.get('start_date', '').strip(),
+            end_date=request.form.get('end_date', '').strip(),
+            budget=budget,
+            notes=request.form.get('notes', '').strip()
+        )
+        flash('Projeto atualizado!', 'success')
+        return redirect(url_for('project_detail', project_id=project_id))
+
+    return render_template('project_form.html', project=project, action='edit')
+
+
+@app.route('/projects/<int:project_id>/delete', methods=['POST'])
+def delete_project_route(project_id):
+    project = get_project(project_id)
+    if project:
+        delete_project(project_id)
+        flash(f'Projeto "{project["name"]}" removido.', 'success')
+    return redirect(url_for('projects'))
 
 
 # ─── BUDGET PLANNER ───────────────────────────────────────────────────────────

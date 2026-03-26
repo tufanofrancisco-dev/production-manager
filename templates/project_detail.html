@@ -1,0 +1,178 @@
+{% extends "base.html" %}
+{% block title %}{{ project.name }} — Production Manager{% endblock %}
+{% block page_title %}{{ project.name }}{% endblock %}
+
+{% block topbar_actions %}
+<div class="d-flex gap-2">
+    <a href="/projects/{{ project.id }}/edit" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-pencil me-1"></i>Editar
+    </a>
+    <form method="POST" action="/projects/{{ project.id }}/delete"
+          onsubmit="return confirm('Remover este projeto? Os pagamentos serão mantidos.');">
+        <button type="submit" class="btn btn-sm btn-outline-danger">
+            <i class="bi bi-trash me-1"></i>Remover
+        </button>
+    </form>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+
+    <!-- Info Card -->
+    <div class="col-lg-4">
+        <div class="table-card p-4">
+            <div class="text-center mb-4">
+                <div class="mx-auto mb-3 d-flex align-items-center justify-content-center"
+                     style="width:72px;height:72px;background:rgba(240,0,0,0.1);border-radius:16px;">
+                    <i class="bi bi-camera-reels-fill" style="font-size:30px;color:var(--accent);"></i>
+                </div>
+                <h5 class="fw-700 mb-1">{{ project.name }}</h5>
+                {% if project.client %}
+                <div class="text-muted" style="font-size:13px;">{{ project.client }}</div>
+                {% endif %}
+            </div>
+
+            <hr style="border-color:#f0f0f0;">
+
+            {% if project.director %}
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <i class="bi bi-camera-video text-muted"></i>
+                <span style="font-size:14px;"><strong>Diretor:</strong> {{ project.director }}</span>
+            </div>
+            {% endif %}
+
+            {% if project.start_date or project.end_date %}
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <i class="bi bi-calendar text-muted"></i>
+                <span style="font-size:14px;">
+                    {% if project.start_date %}{{ project.start_date }}{% endif %}
+                    {% if project.start_date and project.end_date %} → {% endif %}
+                    {% if project.end_date %}{{ project.end_date }}{% endif %}
+                </span>
+            </div>
+            {% endif %}
+
+            {% if project.notes %}
+            <div class="mt-3 p-3 rounded" style="background:#f8f9fa; font-size:13px; color:#555;">
+                <i class="bi bi-chat-quote me-1 text-muted"></i>{{ project.notes }}
+            </div>
+            {% endif %}
+
+            <hr style="border-color:#f0f0f0;">
+
+            <!-- Summary Stats -->
+            <div class="row text-center g-2">
+                <div class="col-6">
+                    <div style="font-size:22px; font-weight:700; color:var(--accent);">
+                        {{ project.prof_count }}
+                    </div>
+                    <div style="font-size:12px; color:#6c757d;">Profissionais</div>
+                </div>
+                <div class="col-6">
+                    <div style="font-size:18px; font-weight:700; color:var(--accent2);">
+                        R$ {{ "{:,.0f}".format(project.total_spent).replace(",", ".") }}
+                    </div>
+                    <div style="font-size:12px; color:#6c757d;">Total gasto</div>
+                </div>
+                {% if project.budget %}
+                <div class="col-12 mt-2">
+                    {% set pct = (project.total_spent / project.budget * 100) | int %}
+                    <div class="d-flex justify-content-between mb-1" style="font-size:12px;">
+                        <span class="text-muted">Budget utilizado</span>
+                        <span class="fw-600 {% if pct > 100 %}text-danger{% else %}text-success{% endif %}">{{ pct }}%</span>
+                    </div>
+                    <div class="progress" style="height:6px; border-radius:3px;">
+                        <div class="progress-bar" style="width:{{ [pct, 100]|min }}%; background:{% if pct > 100 %}var(--accent){% else %}#28a745{% endif %}; border-radius:3px;"></div>
+                    </div>
+                    <div style="font-size:11px; color:#6c757d; margin-top:4px;">
+                        Budget: R$ {{ "{:,.0f}".format(project.budget).replace(",", ".") }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Crew List -->
+    <div class="col-lg-8">
+        <div class="table-card">
+            <div class="table-card-header">
+                <h6><i class="bi bi-people-fill me-2" style="color:var(--accent);"></i>Equipe contratada</h6>
+                <span class="badge bg-light text-dark border">{{ crew|length }} registro{{ 's' if crew|length != 1 else '' }}</span>
+            </div>
+
+            {% if crew %}
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Profissional</th>
+                        <th>Função</th>
+                        <th class="text-end">Cachê</th>
+                        <th class="text-center">Avaliação</th>
+                        <th>Data</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in crew %}
+                    <tr>
+                        <td>
+                            <a href="/professionals/{{ c.prof_id }}" class="fw-500 text-decoration-none" style="color:var(--primary);">
+                                {{ c.name }}
+                            </a>
+                        </td>
+                        <td><span class="role-badge">{{ c.role }}</span></td>
+                        <td class="text-end fw-600">R$ {{ "{:,.0f}".format(c.amount).replace(",", ".") }}</td>
+                        <td class="text-center">
+                            <div class="d-inline-flex gap-1" id="stars-{{ c.payment_id }}">
+                                {% for i in range(1, 6) %}
+                                <i class="bi bi-star{% if c.rating and c.rating >= i %}-fill{% endif %} star-btn"
+                                   data-payment="{{ c.payment_id }}" data-value="{{ i }}"
+                                   onclick="setRating({{ c.payment_id }}, {{ i }})"
+                                   style="cursor:pointer; color:{% if c.rating and c.rating >= i %}#fd9a00{% else %}#ddd{% endif %}; font-size:15px;"
+                                   title="{{ i }} estrela{{ 's' if i > 1 else '' }}"></i>
+                                {% endfor %}
+                            </div>
+                        </td>
+                        <td style="font-size:13px; color:#6c757d;">{{ c.payment_date or '—' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-people" style="font-size:40px; opacity:0.2;"></i>
+                <p class="mt-3 mb-0">Nenhum profissional vinculado a este projeto ainda.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+function setRating(paymentId, rating) {
+    fetch(`/payments/${paymentId}/rate`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({rating: rating})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.ok) updateStars('stars-' + paymentId, rating);
+    });
+}
+
+function updateStars(containerId, rating) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    container.querySelectorAll('.star-btn').forEach(star => {
+        const val = parseInt(star.dataset.value);
+        const filled = val <= rating;
+        star.className = `bi bi-star${filled ? '-fill' : ''} star-btn`;
+        star.style.color = filled ? '#fd9a00' : '#ddd';
+    });
+}
+</script>
+{% endblock %}
+{% endblock %}

@@ -358,8 +358,11 @@
             <a href="/" class="sidebar-link {% if request.path == '/' %}active{% endif %}">
                 <i class="bi bi-speedometer2"></i> Dashboard
             </a>
-            <a href="/professionals" class="sidebar-link {% if '/professionals' in request.path %}active{% endif %}">
+            <a href="/professionals" class="sidebar-link {% if '/professionals' in request.path and '/professionals/new' not in request.path %}active{% endif %}">
                 <i class="bi bi-people-fill"></i> Profissionais
+            </a>
+            <a href="/projects" class="sidebar-link {% if '/projects' in request.path %}active{% endif %}">
+                <i class="bi bi-camera-reels-fill"></i> Projetos
             </a>
             <a href="/planner" class="sidebar-link {% if '/planner' in request.path %}active{% endif %}">
                 <i class="bi bi-calculator-fill"></i> Planejador de Equipe

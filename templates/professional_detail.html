@@ -112,7 +112,15 @@
         <div class="table-card">
             <div class="table-card-header">
                 <h6><i class="bi bi-clock-history me-2" style="color:var(--accent);"></i>Histórico de pagamentos</h6>
-                <span class="badge bg-light text-dark border">{{ payments|length }} registro{{ 's' if payments|length != 1 else '' }}</span>
+                <div class="d-flex align-items-center gap-2">
+                    {% if avg_rating %}
+                    <span style="font-size:13px; color:#6c757d;">
+                        Média: <strong style="color:#fd9a00;">★ {{ avg_rating }}</strong>
+                        <span style="font-size:11px;">({{ rating_count }} avaliação{{ 'ões' if rating_count != 1 else '' }})</span>
+                    </span>
+                    {% endif %}
+                    <span class="badge bg-light text-dark border">{{ payments|length }} registro{{ 's' if payments|length != 1 else '' }}</span>
+                </div>
             </div>
 
             {% if payments %}
@@ -121,26 +129,33 @@
                     <tr>
                         <th>Projeto</th>
                         <th class="text-end">Valor</th>
-                        <th class="text-center">Status</th>
+                        <th class="text-center">Avaliação</th>
                         <th>Data</th>
-                        <th>Obs.</th>
                         <th></th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for pay in payments %}
                     <tr>
-                        <td><strong>{{ pay.project_name or '—' }}</strong></td>
-                        <td class="text-end fw-600">R$ {{ "{:,.0f}".format(pay.amount).replace(",", ".") }}</td>
-                        <td class="text-center">
-                            {% if pay.status == 'pago' %}
-                            <span class="badge-paid">✅ Pago</span>
-                            {% else %}
-                            <span class="badge-pending">⏳ Pendente</span>
+                        <td>
+                            <strong>{{ pay.project_name or '—' }}</strong>
+                            {% if pay.status == 'pendente' %}
+                            <span class="badge-pending ms-1">⏳</span>
                             {% endif %}
                         </td>
+                        <td class="text-end fw-600">R$ {{ "{:,.0f}".format(pay.amount).replace(",", ".") }}</td>
+                        <td class="text-center">
+                            <div class="d-inline-flex gap-1" id="stars-{{ pay.id }}">
+                                {% for i in range(1, 6) %}
+                                <i class="bi bi-star{% if pay.rating and pay.rating >= i %}-fill{% endif %} star-btn"
+                                   data-payment="{{ pay.id }}" data-value="{{ i }}"
+                                   onclick="setRating({{ pay.id }}, {{ i }})"
+                                   style="cursor:pointer; color:{% if pay.rating and pay.rating >= i %}#fd9a00{% else %}#ddd{% endif %}; font-size:14px;"
+                                   title="{{ i }} estrela{{ 's' if i > 1 else '' }}"></i>
+                                {% endfor %}
+                            </div>
+                        </td>
                         <td style="font-size:13px; color:#6c757d;">{{ pay.payment_date or '—' }}</td>
-                        <td style="font-size:13px; color:#6c757d;" class="text-truncate" style="max-width:120px;">{{ pay.notes or '' }}</td>
                         <td>
                             <form method="POST" action="/payments/{{ pay.id }}/delete"
                                   onsubmit="return confirm('Remover este pagamento?');" style="display:inline;">
@@ -162,4 +177,31 @@
         </div>
     </div>
 </div>
+
+{% block scripts %}
+<script>
+function setRating(paymentId, rating) {
+    fetch(`/payments/${paymentId}/rate`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({rating: rating})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.ok) updateStars('stars-' + paymentId, rating);
+    });
+}
+
+function updateStars(containerId, rating) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    container.querySelectorAll('.star-btn').forEach(star => {
+        const val = parseInt(star.dataset.value);
+        const filled = val <= rating;
+        star.className = `bi bi-star${filled ? '-fill' : ''} star-btn`;
+        star.style.color = filled ? '#fd9a00' : '#ddd';
+    });
+}
+</script>
+{% endblock %}
 {% endblock %}
