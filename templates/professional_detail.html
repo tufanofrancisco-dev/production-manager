@@ -22,7 +22,7 @@
         <div class="table-card p-4">
             <div class="text-center mb-4">
                 <div class="mx-auto mb-3 d-flex align-items-center justify-content-center"
-                     style="width:72px;height:72px;background:rgba(233,69,96,0.12);border-radius:50%;">
+                     style="width:72px;height:72px;background:rgba(240,0,0,0.1);border-radius:50%;">
                     <i class="bi bi-person-fill" style="font-size:32px;color:#e94560;"></i>
                 </div>
                 <h5 class="fw-700 mb-1">{{ prof.name }}</h5>
@@ -55,17 +55,17 @@
 
             <div class="row text-center g-2">
                 <div class="col">
-                    <div style="font-size:22px; font-weight:700; color:#e94560;">
+                    <div style="font-size:22px; font-weight:700; color:var(--accent);">
                         R$ {{ "{:,.0f}".format(avg_rate).replace(",", ".") }}
                     </div>
                     <div style="font-size:12px; color:#6c757d;">Cachê médio</div>
                 </div>
                 <div class="col">
-                    <div style="font-size:22px; font-weight:700; color:#1a1a2e;">{{ total_projects }}</div>
+                    <div style="font-size:22px; font-weight:700; color:var(--primary);">{{ total_projects }}</div>
                     <div style="font-size:12px; color:#6c757d;">Projetos</div>
                 </div>
                 <div class="col-12 mt-1">
-                    <div style="font-size:18px; font-weight:700; color:#28a745;">
+                    <div style="font-size:18px; font-weight:700; color:var(--accent2);">
                         R$ {{ "{:,.0f}".format(total_received).replace(",", ".") }}
                     </div>
                     <div style="font-size:12px; color:#6c757d;">Total recebido</div>
@@ -75,7 +75,7 @@
 
         <!-- Add Payment -->
         <div class="table-card p-4 mt-4">
-            <h6 class="fw-600 mb-3"><i class="bi bi-plus-circle me-2" style="color:#e94560;"></i>Registrar pagamento</h6>
+            <h6 class="fw-600 mb-3"><i class="bi bi-plus-circle me-2" style="color:var(--accent);"></i>Registrar pagamento</h6>
             <form method="POST" action="/professionals/{{ prof.id }}/payments/add">
                 <div class="mb-2">
                     <input type="text" name="project_name" class="form-control form-control-sm" placeholder="Nome do projeto" required>
@@ -111,7 +111,7 @@
     <div class="col-lg-8">
         <div class="table-card">
             <div class="table-card-header">
-                <h6><i class="bi bi-clock-history me-2" style="color:#e94560;"></i>Histórico de pagamentos</h6>
+                <h6><i class="bi bi-clock-history me-2" style="color:var(--accent);"></i>Histórico de pagamentos</h6>
                 <span class="badge bg-light text-dark border">{{ payments|length }} registro{{ 's' if payments|length != 1 else '' }}</span>
             </div>
 

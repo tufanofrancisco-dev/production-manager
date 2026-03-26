@@ -7,7 +7,7 @@
 <div class="row g-3 mb-4">
     <div class="col-sm-6 col-xl-3">
         <div class="stat-card">
-            <div class="stat-icon" style="background: rgba(233,69,96,0.12); color: #e94560;">
+            <div class="stat-icon red">
                 <i class="bi bi-people-fill"></i>
             </div>
             <div class="stat-value">{{ total_professionals }}</div>
@@ -16,7 +16,7 @@
     </div>
     <div class="col-sm-6 col-xl-3">
         <div class="stat-card">
-            <div class="stat-icon" style="background: rgba(40,167,69,0.12); color: #28a745;">
+            <div class="stat-icon dark">
                 <i class="bi bi-receipt-cutoff"></i>
             </div>
             <div class="stat-value">{{ total_payments }}</div>
@@ -25,7 +25,7 @@
     </div>
     <div class="col-sm-6 col-xl-3">
         <div class="stat-card">
-            <div class="stat-icon" style="background: rgba(245,166,35,0.12); color: #f5a623;">
+            <div class="stat-icon orange">
                 <i class="bi bi-currency-dollar"></i>
             </div>
             <div class="stat-value">R$ {{ "{:,.0f}".format(total_paid).replace(",", ".") }}</div>
@@ -34,7 +34,7 @@
     </div>
     <div class="col-sm-6 col-xl-3">
         <div class="stat-card">
-            <div class="stat-icon" style="background: rgba(13,110,253,0.12); color: #0d6efd;">
+            <div class="stat-icon gray">
                 <i class="bi bi-tags-fill"></i>
             </div>
             <div class="stat-value">{{ total_roles }}</div>
@@ -48,7 +48,7 @@
     <div class="col-lg-5">
         <div class="table-card h-100">
             <div class="table-card-header">
-                <h6><i class="bi bi-bar-chart-fill me-2" style="color:#e94560;"></i>Funções mais contratadas</h6>
+                <h6><i class="bi bi-bar-chart-fill me-2" style="color:var(--accent);"></i>Funções mais contratadas</h6>
             </div>
             <div class="p-3">
                 {% for r in top_roles %}
@@ -79,7 +79,7 @@
     <div class="col-lg-7">
         <div class="table-card">
             <div class="table-card-header">
-                <h6><i class="bi bi-person-lines-fill me-2" style="color:#e94560;"></i>Últimos profissionais adicionados</h6>
+                <h6><i class="bi bi-person-lines-fill me-2" style="color:var(--accent);"></i>Últimos profissionais adicionados</h6>
                 <a href="/professionals" class="btn btn-sm btn-outline-secondary">Ver todos</a>
             </div>
             {% if recent_professionals %}
@@ -131,10 +131,10 @@
 <!-- Quick actions -->
 <div class="row g-3 mt-2">
     <div class="col-12">
-        <div class="p-3 rounded-3" style="background: linear-gradient(135deg, #1a1a2e, #16213e); color: white;">
+        <div class="p-3 rounded-3" style="background: linear-gradient(135deg, #18181c, #313131); color: white;">
             <div class="row align-items-center">
                 <div class="col">
-                    <h6 class="mb-1" style="color: #f5a623;">
+                    <h6 class="mb-1" style="color: var(--accent2);">
                         <i class="bi bi-calculator-fill me-2"></i>Planejador de Equipe
                     </h6>
                     <p class="mb-0 opacity-75" style="font-size: 13px;">
@@ -142,7 +142,7 @@
                     </p>
                 </div>
                 <div class="col-auto">
-                    <a href="/planner" class="btn" style="background: #e94560; color: white; font-weight: 500;">
+                    <a href="/planner" class="btn btn-primary-custom">
                         Abrir Planejador <i class="bi bi-arrow-right ms-1"></i>
                     </a>
                 </div>

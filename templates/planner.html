@@ -7,7 +7,7 @@
     <!-- Left: Form -->
     <div class="col-lg-4">
         <div class="table-card p-4">
-            <h6 class="fw-600 mb-1"><i class="bi bi-sliders me-2" style="color:#e94560;"></i>Parâmetros da produção</h6>
+            <h6 class="fw-600 mb-1"><i class="bi bi-sliders me-2" style="color:var(--accent);"></i>Parâmetros da produção</h6>
             <p class="text-muted mb-4" style="font-size:13px;">Informe o budget disponível e as funções que você precisa contratar.</p>
 
             <div class="mb-3">
@@ -210,7 +210,7 @@ function renderResults(data) {
     const optLabels = {
         'economy': { label: 'Equipe Econômica', icon: 'bi-piggy-bank-fill', color: '#28a745', desc: 'Profissionais com menor cachê médio histórico' },
         'balanced': { label: 'Equipe Equilibrada', icon: 'bi-balance-scale-fill', color: '#0d6efd', desc: 'Profissionais com cachê médio da faixa intermediária' },
-        'premium': { label: 'Equipe Premium', icon: 'bi-star-fill', color: '#f5a623', desc: 'Profissionais com maior experiência (maior cachê médio)' }
+        'premium': { label: 'Equipe Premium', icon: 'bi-star-fill', color: '#fd9a00', desc: 'Profissionais com maior experiência (maior cachê médio)' }
     };
 
     let html = `
@@ -270,8 +270,8 @@ function renderResults(data) {
                 <div class="team-member-row px-3" style="${i === 0 ? '' : ''}">
                     <div class="d-flex align-items-center gap-2">
                         <div class="d-flex align-items-center justify-content-center rounded-circle"
-                             style="width:34px;height:34px;background:rgba(26,26,46,0.08); flex-shrink:0;">
-                            <i class="bi bi-person-fill" style="font-size:15px; color:#1a1a2e;"></i>
+                             style="width:34px;height:34px;background:rgba(24,24,28,0.08); flex-shrink:0;">
+                            <i class="bi bi-person-fill" style="font-size:15px; color:#18181c;"></i>
                         </div>
                         <div>
                             <div class="fw-500" style="font-size:14px;">${member.name}</div>
